@@ -6,7 +6,7 @@
 #define ABSOLUTE_PATH_MAX_LEN 128
 
 node *root = NULL;
-char *cur_dir = NULL;
+node *cur_dir = NULL;
 int SIZE = 0;
 
 int create(int disk_size);
@@ -19,12 +19,17 @@ void get_cur_dir(char *dst);
 int list(const char *path, int dir_first);
 void setup_file_manager(file_manager_t *fm);
 
+int is_valid_path(char* path);
+int createObject(char* path, int size, int isDir);
+int count(char *path);
+char** parser(char* path, int size);
+
 int main()
 {
     file_manager_t *fm;
     setup_file_manager(fm);
     fm->create(100);
-    fm->create_dir("/Desktop");
+    fm->create_dir("/Desk!!!top");
     fm->create_dir("/Documents");
     fm->create_dir("/Downloads");
     fm->create_dir("/file_Manager");
@@ -68,6 +73,84 @@ void setup_file_manager(file_manager_t *fm)
     fm->list = list;
 }
 
+int is_valid_path(char* path)
+{
+    char arr[] = "!/\\,{}[]<>@#$%^&*()+|'\"?~`*+=";
+    if(!path || strlen(path) > NODE_VALUE_MAX_LENGTH || !strcmp(path, ""))
+    {
+        return 0;
+    }
+    for(int i = 0; i != strlen(arr); ++i)
+    {
+        if(strchr(path, arr[i]))
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int count(char* path)
+{
+    int count = 0;
+    for (int i = 0; i != strlen(path); ++i)
+    {
+        if (path[i] == '/')
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+char** parser(char *path, int size)
+{
+    char** lines = (char**)malloc(sizeof(char*) * size);
+    lines[0] = strtok(path, "/");
+    for(int i = 1; i < size; ++i)
+    {
+        lines[i] = strtok(NULL, "/");
+    }
+    return lines;
+}
+
+int createObject(char* path, int size, int isDir)
+{
+    int _size = count(path);
+    char **token = parser(path, _size);
+    node* iter = root;
+    for (int i = 0; i != _size - 1; ++i)
+    {
+        iter = is_contains(iter->child, token[i]);
+        if (!is_valid_path(token[i]) && !iter)
+        {
+            free(path);
+            path = NULL;
+            token = NULL;
+            return 0;
+        }
+    }
+    if(!is_contains(iter->child, token[_size - 1]) && is_valid_path(token[_size - 1]))
+    {
+        node* tmp = (node*)malloc(sizeof(node));
+        tmp->child = createLinkedList();
+        tmp->is_dir = isDir;
+        tmp->parent = iter;
+        tmp->nodeValue = strdup(token[_size - 1]);
+        tmp->absolutePath = strdup(path);
+        pushBack(iter->child, tmp);
+        free(path);
+        path = NULL;
+        token = NULL;
+        if (!isDir && SIZE - size < 0)
+        {
+            return 0;
+        }
+        return 1;
+    }
+    return 0;
+}
+
 // implementation of main functions
 int create(int disk_size)
 {
@@ -81,8 +164,8 @@ int create(int disk_size)
         root->parent = NULL;
         root->absolutePath = strdup("/");
         root->nodeValue = strdup("/");
-        cur_dir = (char *)malloc(sizeof(char) * ABSOLUTE_PATH_MAX_LEN);
-        cur_dir = strdup("/");
+        cur_dir = (node *)malloc(sizeof(node));
+        cur_dir = root;
         return 1;
     }
     return 0;
@@ -95,7 +178,18 @@ int destroy()
 
 int create_dir(const char *path)
 {
-    return 0;
+    if (!path && !root) 
+    {
+        return 0;
+    }
+    if (*path == '/')
+    {
+        return createObject(strdup(path), 0, 1);
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 int create_file(const char *path, int file_size)
@@ -110,6 +204,7 @@ int remove(const char *path, int recursive)
 
 int change_dir(const char *path)
 {
+    
     return 0;
 }
 
@@ -117,7 +212,7 @@ void get_cur_dir(char *dst)
 {
     if (dst && cur_dir)
     {
-        dst = strdup(cur_dir);
+        dst = cur_dir->absolutePath;
     }
 }
 
