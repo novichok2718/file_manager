@@ -19,17 +19,19 @@ void get_cur_dir(char *dst);
 int list(const char *path, int dir_first);
 void setup_file_manager(file_manager_t *fm);
 
-int is_valid_path(char* path);
-int createObject(char* path, int size, int isDir);
+int is_valid_path(char *path);
+int createObject(const char *path, int size, int isDir);
 int count(char *path);
-char** parser(char* path, int size);
+char *get_abs_path(char *lhs, char *rhs);
+char **parser(char *path, int size);
+int set_cur_dir(char *path, int size);
 
 int main()
 {
     file_manager_t *fm;
     setup_file_manager(fm);
     fm->create(100);
-    fm->create_dir("/Desk!!!top");
+    fm->create_dir("/Desktop");
     fm->create_dir("/Documents");
     fm->create_dir("/Downloads");
     fm->create_dir("/file_Manager");
@@ -73,16 +75,16 @@ void setup_file_manager(file_manager_t *fm)
     fm->list = list;
 }
 
-int is_valid_path(char* path)
+int is_valid_path(char *path)
 {
     char arr[] = "!/\\,{}[]<>@#$%^&*()+|'\"?~`*+=";
-    if(!path || strlen(path) > NODE_VALUE_MAX_LENGTH || !strcmp(path, ""))
+    if (!path || strlen(path) > NODE_VALUE_MAX_LENGTH || !strcmp(path, ""))
     {
         return 0;
     }
-    for(int i = 0; i != strlen(arr); ++i)
+    for (int i = 0; i != strlen(arr); ++i)
     {
-        if(strchr(path, arr[i]))
+        if (strchr(path, arr[i]))
         {
             return 0;
         }
@@ -90,7 +92,7 @@ int is_valid_path(char* path)
     return 1;
 }
 
-int count(char* path)
+int count(char *path)
 {
     int count = 0;
     for (int i = 0; i != strlen(path); ++i)
@@ -103,44 +105,75 @@ int count(char* path)
     return count;
 }
 
-char** parser(char *path, int size)
+char **parser(char *path, int size)
 {
-    char** lines = (char**)malloc(sizeof(char*) * size);
+    char **lines = (char **)malloc(sizeof(char *) * size);
     lines[0] = strtok(path, "/");
-    for(int i = 1; i < size; ++i)
+    for (int i = 1; i < size; ++i)
     {
         lines[i] = strtok(NULL, "/");
     }
     return lines;
 }
 
-int createObject(char* path, int size, int isDir)
+int set_cur_dir(char *path, int size)
 {
-    int _size = count(path);
-    char **token = parser(path, _size);
-    node* iter = root;
-    for (int i = 0; i != _size - 1; ++i)
+    char **token = parser(path, size);
+    cur_dir = root;
+    for (int i = 0; i != size; ++i)
     {
-        iter = is_contains(iter->child, token[i]);
-        if (!is_valid_path(token[i]) && !iter)
+        cur_dir = is_contains(cur_dir->child, token[i], 1);
+        if (!is_valid_path(token[i]) && !cur_dir)
         {
+            cur_dir = root;
             free(path);
             path = NULL;
             token = NULL;
             return 0;
         }
     }
-    if(!is_contains(iter->child, token[_size - 1]) && is_valid_path(token[_size - 1]))
+    free(path);
+    path = NULL;
+    token = NULL;
+    return 1;
+}
+
+char *get_abs_path(char *lhs, char *rhs)
+{
+    char *abs_path = malloc(ABSOLUTE_PATH_MAX_LEN);
+    strcpy(abs_path, lhs);
+    strcat(abs_path, rhs);
+    return abs_path;
+}
+
+int createObject(const char *path, int size, int isDir)
+{
+    char *_path = strdup(path);
+    int _size = count(_path);
+    char **token = parser(_path, _size);
+    node *iter = root;
+    for (int i = 0; i != _size - 1; ++i)
     {
-        node* tmp = (node*)malloc(sizeof(node));
+        iter = is_contains(iter->child, token[i], isDir);
+        if (!is_valid_path(token[i]) && !iter)
+        {
+            free(_path);
+            _path = NULL;
+            token = NULL;
+            return 0;
+        }
+    }
+    if (!is_contains(iter->child, token[_size - 1], isDir) && is_valid_path(token[_size - 1]))
+    {
+        node *tmp = (node *)malloc(sizeof(node));
         tmp->child = createLinkedList();
         tmp->is_dir = isDir;
         tmp->parent = iter;
         tmp->nodeValue = strdup(token[_size - 1]);
         tmp->absolutePath = strdup(path);
         pushBack(iter->child, tmp);
-        free(path);
-        path = NULL;
+        free(_path);
+        _path = NULL;
         token = NULL;
         if (!isDir && SIZE - size < 0)
         {
@@ -148,6 +181,9 @@ int createObject(char* path, int size, int isDir)
         }
         return 1;
     }
+    free(_path);
+    _path = NULL;
+    token = NULL;
     return 0;
 }
 
@@ -166,6 +202,7 @@ int create(int disk_size)
         root->nodeValue = strdup("/");
         cur_dir = (node *)malloc(sizeof(node));
         cur_dir = root;
+        SIZE = disk_size;
         return 1;
     }
     return 0;
@@ -178,18 +215,26 @@ int destroy()
 
 int create_dir(const char *path)
 {
-    if (!path && !root) 
+    if (!path && !root)
     {
         return 0;
     }
+    char *_path = strdup(path);
     if (*path == '/')
     {
-        return createObject(strdup(path), 0, 1);
+        return createObject(path, 0, 1);
     }
-    else
+    else if (*path == '.' && *(path + 1) == '/')
     {
-        return 0;
+        char *abs_path = get_abs_path(cur_dir->absolutePath, _path + 1);
+        free(_path);
+        _path = NULL;
+        return createObject(abs_path, 0, 1);
     }
+    else if (*path == '.' && *(path + 1) == '.' && *(path + 2) == '/')
+    {
+    }
+    return 0;
 }
 
 int create_file(const char *path, int file_size)
@@ -204,7 +249,22 @@ int remove(const char *path, int recursive)
 
 int change_dir(const char *path)
 {
-    
+    if (!root && !path)
+    {
+        return 0;
+    }
+    char *_path = strdup(path);
+    if (*path == '/')
+    {
+        return set_cur_dir(_path, count(_path));
+    }
+    else if (*path == '.' && *(path + 1) == '/')
+    {
+        char *abs_path = get_abs_path(cur_dir->absolutePath, _path + 1);
+        free(_path);
+        _path = NULL;
+        return set_cur_dir(abs_path, count(abs_path));
+    }
     return 0;
 }
 

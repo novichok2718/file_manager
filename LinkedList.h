@@ -108,12 +108,12 @@ void deleteLinkedList(LinkedList **list)
     (*list) = NULL;
 }
 
-node *is_contains(LinkedList *list, char *nodeValue)
+node *is_contains(LinkedList *list, char *nodeValue, int isDir)
 {
     ListItem *item = list->head;
     while (item)
     {
-        if (!strcmp(item->node->nodeValue, nodeValue))
+        if (!strcmp(item->node->nodeValue, nodeValue) && item->node->is_dir == isDir)
         {
             return item->node;
         }
