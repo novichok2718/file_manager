@@ -39,27 +39,28 @@ int main()
     fm->create_dir("./lesson");
     fm->create_dir("./python_Course_Tinkoff");
     fm->change_dir("./lesson");
-    fm->create_file("a.out", 1);
-    fm->create_file("FCFS", 1);
-    fm->create_file("input.txt", 1);
+    fm->create_dir("./a.out");
+    fm->create_file("./a.out", 1);
+    fm->create_file("./FCFS", 1);
+    fm->create_file("./input.txt", 1);
     fm->change_dir("../python_Course_Tinkoff");
-    fm->create_file("main.py", 1);
-    fm->create_file("taxis", 1);
-    fm->create_file("test.ipynb", 1);
+    fm->create_file("./main.py", 1);
+    fm->create_file("./taxis", 1);
+    fm->create_file("./test.ipynb", 1);
     fm->change_dir("../../Downloads");
     fm->create_dir("/Telegram Desktop");
     fm->change_dir("./Telegram Desktop");
-    fm->create_file("Compiler Explorer code.cpp", 1);
-    fm->create_file("FileName(2).cpp", 1);
-    fm->create_file("makefile", 1);
-    fm->create_file("New_Sort", 1);
+    fm->create_file("./Compiler Explorer code.cpp", 1);
+    fm->create_file("./FileName(2).cpp", 1);
+    fm->create_file("./makefile", 1);
+    fm->create_file("./New_Sort", 1);
     fm->change_dir("..");
     fm->create_file("main.cpp", 1);
     fm->create_file("os_file.h", 1);
     fm->change_dir("../file_Manager");
-    fm->create_file("22_1_2task", 1);
-    fm->create_file("22_1_2task.c", 1);
-    fm->create_file("os_file", 1);
+    fm->create_file("./22_1_2task", 1);
+    fm->create_file("./22_1_2task.c", 1);
+    fm->create_file("./os_file", 1);
     return 0;
 }
 
@@ -154,8 +155,8 @@ int createObject(const char *path, int size, int isDir)
     node *iter = root;
     for (int i = 0; i != _size - 1; ++i)
     {
-        iter = is_contains(iter->child, token[i], isDir);
-        if (!is_valid_path(token[i]) && !iter)
+        iter = is_contains(iter->child, token[i], 1);
+        if (!is_valid_path(token[i]) && !iter && iter->is_dir)
         {
             free(_path);
             _path = NULL;
@@ -172,6 +173,7 @@ int createObject(const char *path, int size, int isDir)
         tmp->nodeValue = strdup(token[_size - 1]);
         tmp->absolutePath = strdup(path);
         pushBack(iter->child, tmp);
+        SIZE -= size;
         free(_path);
         _path = NULL;
         token = NULL;
@@ -239,6 +241,22 @@ int create_dir(const char *path)
 
 int create_file(const char *path, int file_size)
 {
+    if (!path && !root)
+    {
+        return 0;
+    }
+    char *_path = strdup(path);
+    if (*path == '/')
+    {
+        return createObject(path, file_size, 0);
+    }
+    else if (*path == '.' && *(path + 1) == '/')
+    {
+        char *abs_path = get_abs_path(cur_dir->absolutePath, _path + 1);
+        free(_path);
+        _path = NULL;
+        return createObject(abs_path, file_size, 0);
+    }
     return 0;
 }
 
